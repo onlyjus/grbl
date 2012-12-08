@@ -34,10 +34,35 @@ class gui:
         self.grblDeviceCombo['values']=glob.glob('/dev/serial/by-id/*')+glob.glob('/dev/tty*')
 
     def setupMode(self):
+        #variables
+        self.grblDevice=tk.StringVar()
+        self.grblDevice.set('Select a Device')
+        self.connectTestInfo=tk.StringVar()
+        self.connectTestInfo.set('Please Test Connection')
+        
         self.setupModeFrame=tk.Frame(self.modeFrame)
-        ttk.Label(self.setupModeFrame, text='Select grbl Hardware:').pack()
-        self.grblDeviceCombo=ttk.Combobox(self.setupModeFrame, values=self.setupModeFrame)
+        self.deviceSelFrame=ttk.LabelFrame(self.setupModeFrame, text='Select grbl Hardware:')
+        self.deviceSelFrame.pack()
+        self.grblDeviceCombo=ttk.Combobox(self.deviceSelFrame, textvariable=self.grblDevice)
         self.grblDeviceCombo.pack()
+
+        ttk.Button(self.setupModeFrame, text='Test Connection', command=self.testConnection).pack()
+        ttk.Label(self.setupModeFrame, textvariable=self.connectTestInfo).pack()
+
+    def testConnection(self):
+        try:
+            self.serialCon = serial.Serial(self.grblDevice.get(),9600,timeout =1)
+        except:
+            self.connectTestInfo.set('Could Not Open Port')
+            return
+        
+        self.wakeUp()
+        self.serialCon.write('G92 x0 y0 z0' + '\n') # Send g-code block to grbl
+        grbl_out = self.serialCon.readline() # Wait for grbl response with carriage return
+        if grbl_out.strip()=='ok':
+            self.connectTestInfo.set('Good Connection')
+        else:
+            self.connectTestInfo.set('Connection timed out')
 
     def setupShow(self):
         self.findSerialPorts()
@@ -48,7 +73,7 @@ class gui:
 
     def connect(self): 
         # Open grbl serial port
-        self.serialCon = serial.Serial('/dev/serial/by-path/platform-bcm2708_usb-usb-0:1.2:1.0',9600)
+        self.serialCon = serial.Serial(self.grblDevice.get(),9600)
 
     def openGcode(self):
         # Open g-code file
